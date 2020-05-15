@@ -1,0 +1,100 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "aws cloudformation template for cloud computing hw4 Intelligent System on Cloud",
+    "Resources": {
+        "MyS3": {
+            "Type": "AWS::S3::Bucket",
+            "DependsOn": "MyInvokePermission",
+            "Properties": {
+                "BucketName": "mys3forhw4mxm-5",
+                "NotificationConfiguration": {
+                "LambdaConfigurations": [
+                    {
+                        "Event": "s3:ObjectCreated:*",
+                        "Function": {
+                            "Fn::GetAtt": [
+                                "MyLambda",
+                                "Arn"
+                            ]
+                        }
+                    }
+                ]}
+            }
+        },
+        "MyS3Policy": {     
+            "Type" : "AWS::S3::BucketPolicy",
+            "Properties" : {
+                "Bucket" :  { "Ref": "MyS3" },
+                "PolicyDocument" : {
+                    "Statement": [
+                    {
+                        "Sid": "AllowSESPuts",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "ses.amazonaws.com"
+                        },
+                        "Action": "s3:PutObject",
+                        "Resource": { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "MyS3" } , "/*" ]]},
+                        "Condition": {
+                            "StringEquals": {
+                                "aws:Referer": "570575455018"
+                            }
+                        }
+                    }
+                ]
+                }
+            }
+        },
+        "MyInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+            "DependsOn": "MyLambda",
+            "Properties": {
+                "FunctionName": "MyLambdaForHW4MXM-5",
+            "Action": "lambda:InvokeFunction",
+            "Principal": "s3.amazonaws.com",
+            "SourceArn":  "arn:aws:s3:::mys3forhw4mxm-5"
+            }
+        },
+        "MyLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Code": {
+                    "S3Bucket": "hw4-xm",
+                    "S3Key": "send-emails-to-test-2.zip"
+                },
+                "FunctionName": "MyLambdaForHW4MXM-5",
+                "Handler": "send-emails-to-test.lambda_handler",
+                "Role": "arn:aws:iam::570575455018:role/service-role/send-emails-to-test-role-t0puhlme",
+                "Runtime": "python3.8",
+                "Timeout": "300",
+                "Layers": ["arn:aws:lambda:us-east-1:570575455018:layer:mailparser:1"],
+                "Environment": {
+                    "Variables": {
+                        "REGION": "us-east-1"
+                    }
+                },
+            }
+        },
+        "MySES": {
+            "Type" : "AWS::SES::ReceiptRule",
+            "Properties" : {
+                "RuleSetName": { "Ref": "MySESSet" },
+                "Rule" : {
+                    "Actions": [{
+                        "S3Action": {
+                            "BucketName" : { "Ref": "MyS3" },
+                        }
+                    }],
+                    "Enabled": true,
+                    "Name": "MyRule-5"
+                }
+            }, 
+        },
+        "MySESSet": {
+            "Type": "AWS::SES::ReceiptRuleSet",
+            "Properties": {
+                "RuleSetName": "hw4sesmxm-5"
+            }
+        }
+    }
+}
